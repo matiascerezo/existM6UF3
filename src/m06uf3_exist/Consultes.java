@@ -30,11 +30,16 @@ public class Consultes {
         this.con = con;
     }
 
+    /**
+     * Método que devuelve una lista con todas las plantas.
+     *
+     * @return
+     */
     public List<Node> obtenirPlantes() {
         List<Node> plantas = new ArrayList<>();
         try {
             xqe = con.createExpression();
-            String xq = "for $b in doc ('/m06uf3/plantas/plantas.xml')////PLANT return $b/COMMON";
+            String xq = "for $b in doc ('/m06uf3/plantas/plantas.xml')//PLANT return $b/COMMON";
 
             XQResultSequence rs = xqe.executeQuery(xq);
             while (rs.next()) {
@@ -46,13 +51,19 @@ public class Consultes {
         return plantas;
     }
 
-    public Node cercarNom(String nom) {
+    /**
+     * Método al que se le pasa por parametro un nombre de una planta y devuelve
+     * el nodo con su correspondientes atributos.
+     *
+     * @param nom
+     * @return
+     */
+    public Node cercarPerNomComu(String nom) {
         Node planta = null;
         try {
             xqe = con.createExpression();
             String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')"
-                    + "//PLANT where every $a in $b//COMMON satisfies ($a = '" + nom + "') return $b";
-
+                    + "//PLANT where every $a in $b/COMMON satisfies ($a = '" + nom + "') return $b";
             XQResultSequence rs = xqe.executeQuery(xq);
             rs.next();
             planta = rs.getItem().getNode();
@@ -62,6 +73,17 @@ public class Consultes {
         return planta;
     }
 
+    /**
+     * Método al que se le pasan por parametro los valores de la planta y la
+     * añade al principio del todo.
+     *
+     * @param common
+     * @param botanical
+     * @param zone
+     * @param light
+     * @param price
+     * @param availability
+     */
     public void afegirPlanta(String common, String botanical, int zone, String light, String price, String availability) {
         try {
             xqe = con.createExpression();
@@ -73,14 +95,21 @@ public class Consultes {
                     + "        <LIGHT>" + light + "</LIGHT>"
                     + "        <PRICE>" + price + "</PRICE>"
                     + "         <AVAILABILITY>" + availability + "</AVAILABILITY>"
-                    + "    </PLANT>\n"
-                    + " following doc('/m06uf3/plantas/plantas.xml')/PLANT";
+                    + "    </PLANT>"
+                    + "preceding doc('/m06uf3/plantas/plantas.xml')//PLANT[1]";
             xqe.executeCommand(xq);
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
     }
 
+    /**
+     * Método que añade un atributo a todas las plantas. El nombre y el valor
+     * del atributo a añadir se le pasa por parametro.
+     *
+     * @param atributo
+     * @param valor
+     */
     public void afegirAtribut(String atributo, String valor) {
         try {
             xqe = con.createExpression();
@@ -91,10 +120,19 @@ public class Consultes {
         }
     }
 
-    public void afegirEtiqueta(String etiqueta, String valor) {
+    /**
+     * Método que añade la etiqueta con el nombre que se pasa por parametro con
+     * el valor que se para por parametro teniendo en cuenta que solo se
+     * añadirán esas etiquetas a las plantas con zona X (Se pasa por parametro).
+     *
+     * @param etiqueta
+     * @param valor
+     * @param zona
+     */
+    public void afegirEtiqueta(String etiqueta, String valor, int zona) {
         try {
             xqe = con.createExpression();
-            String xq = "update insert <" + etiqueta + ">'" + valor + "'</" + etiqueta + "> into doc('/m06uf3/plantas/plantas.xml')//PLANT";
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/ZONE satisfies($a='" + zona + "') return update insert <" + etiqueta.toUpperCase() + "> {'" + valor + "'} </" + etiqueta.toUpperCase() + "> into $b";
             xqe.executeCommand(xq);
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
@@ -111,7 +149,7 @@ public class Consultes {
         }
     }
 
-    public void eliminarLlibre(String codigo) {
+    public void eliminarPlanta(String codigo) {
 
         try {
             xqe = con.createExpression();
@@ -142,6 +180,12 @@ public class Consultes {
         }
     }
 
+    /**
+     * Método que traduce todas las etiquetas de las plantas.
+     *
+     * @param etiquetaNormal
+     * @param etiquetaTraducida
+     */
     void traducirNombreEtiquetas(String[] etiquetaNormal, String[] etiquetaTraducida) {
         try {
             xqe = con.createExpression();
@@ -154,13 +198,33 @@ public class Consultes {
         }
     }
 
+    /**
+     * Método que modifica el precio de cada planta, eliminando el símbolo del
+     * dólar.
+     */
     void modificarFormatoDolar() {
         try {
             xqe = con.createExpression();
-            String xq = "update doc('/m06uf3/plantas/plantas.xml')//PLANT/";
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT/PRICE return update value $b with substring($b,2)";
             xqe.executeCommand(xq);
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (XQException ex) {
+            System.out.println(ex.getMessage());
         }
+    }
+    
+    /**
+     * Método que devuelve las plantas que esten en la zona X. (No funciona, acabar).
+     * @param zona
+     * @return 
+     */
+    public Node cercarPlantesRangPreu(int zona) {
+        try {
+            xqe = con.createExpression();
+            //String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/ZONE satisfies($a='" + zona + "') return $b";
+            //xqe.executeCommand(xq);
+        } catch (XQException ex) {
+            System.out.println(ex.getMessage());
+        }
+        return null;
     }
 }
