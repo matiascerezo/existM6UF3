@@ -15,15 +15,15 @@ public class M06uf3_exist {
         }
     }
 
-    private static void imprimirPlantaNode(Node libro) {
-        if (libro != null) {
-            NamedNodeMap attributes = libro.getAttributes();
+    private static void imprimirPlantaNode(Node planta) {
+        if (planta != null) {
+            NamedNodeMap attributes = planta.getAttributes();
 
             for (int i = 0; i < attributes.getLength(); i++) {
                 System.out.println(attributes.item(i).getNodeValue());
             }
 
-            System.out.println(libro.getTextContent());
+            System.out.println(planta.getTextContent());
         }
     }
 
@@ -85,7 +85,7 @@ public class M06uf3_exist {
         
         //Afegir un node de tipus text amb un valor per defecte a totes les plantes d'una mateixa
         //zona.
-        cs.afegirEtiqueta("prueba", "HolaHala", 0);
-        
+        //cs.afegirEtiqueta("prueba", "HolaHala", 0);
+        imprimirPlantas(cs.cercarPlantesPerZona(0));
     }
 }

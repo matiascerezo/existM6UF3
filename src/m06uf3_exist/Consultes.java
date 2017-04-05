@@ -6,10 +6,8 @@
 package m06uf3_exist;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import javax.xml.xquery.XQConnection;
-import javax.xml.xquery.XQDataSource;
 import javax.xml.xquery.XQException;
 import javax.xml.xquery.XQExpression;
 import javax.xml.xquery.XQPreparedExpression;
@@ -217,14 +215,18 @@ public class Consultes {
      * @param zona
      * @return 
      */
-    public Node cercarPlantesRangPreu(int zona) {
+    public List<Node> cercarPlantesPerZona(int zona) {
+        List<Node> listaPlantas = new ArrayList<>();
         try {
             xqe = con.createExpression();
-            //String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/ZONE satisfies($a='" + zona + "') return $b";
-            //xqe.executeCommand(xq);
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/ZONE satisfies($a='" + zona + "') return $b";
+            XQResultSequence rs = xqe.executeQuery(xq);
+            while (rs.next()) {
+                listaPlantas.add(rs.getItem().getNode());
+            }
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
-        return null;
+        return listaPlantas;
     }
 }
