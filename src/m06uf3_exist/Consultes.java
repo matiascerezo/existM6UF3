@@ -16,7 +16,7 @@ import org.w3c.dom.Node;
 
 /**
  *
- * @author Jorge
+ * @author Matias
  */
 public class Consultes {
 
@@ -26,6 +26,40 @@ public class Consultes {
 
     public Consultes(XQConnection con) {
         this.con = con;
+    }
+
+    /**
+     * Método que traduce todas las etiquetas de las plantas.
+     *
+     * @param etiquetaNormal
+     * @param etiquetaTraducida
+     */
+    public void traducirNombreEtiquetas(String[] etiquetaNormal, String[] etiquetaTraducida) {
+        try {
+            xqe = con.createExpression();
+            for (int i = 0; i < etiquetaNormal.length; i++) {
+                String xq = "update rename doc('/m06uf3/plantas/plantas.xml')//PLANT/" + etiquetaNormal[i] + " as '" + etiquetaTraducida[i] + "'";
+                xqe.executeCommand(xq);
+                System.out.println("Etiquetas traducidas!");
+            }
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    /**
+     * Método que modifica el precio de cada planta, eliminando el símbolo del
+     * dólar.
+     */
+    public void modificarFormatoDolar() {
+        try {
+            xqe = con.createExpression();
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT/PRICE return update value $b with substring($b,2)";
+            xqe.executeCommand(xq);
+            System.out.println("Modificado!");
+        } catch (XQException ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 
     /**
@@ -96,6 +130,7 @@ public class Consultes {
                     + "    </PLANT>"
                     + "preceding doc('/m06uf3/plantas/plantas.xml')//PLANT[1]";
             xqe.executeCommand(xq);
+            System.out.println("Añadida planta: " + common);
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
@@ -113,6 +148,7 @@ public class Consultes {
             xqe = con.createExpression();
             String xq = "update insert attribute " + atributo + " {'" + valor + "'} into doc('/m06uf3/plantas/plantas.xml')//PLANT";
             xqe.executeCommand(xq);
+            System.out.println("Añadido el atributo " + atributo + " con valor: " + valor);
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
@@ -132,88 +168,40 @@ public class Consultes {
             xqe = con.createExpression();
             String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/ZONE satisfies($a='" + zona + "') return update insert <" + etiqueta.toUpperCase() + "> {'" + valor + "'} </" + etiqueta.toUpperCase() + "> into $b";
             xqe.executeCommand(xq);
-        } catch (XQException ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    public void modificarPreuNode(String codigo, String precio) {
-        try {
-            xqe = con.createExpression();
-            String xq = "update value doc('/m06uf3/plantas/plantas.xml')//PLANT[@codigo='" + codigo + "']/preu with '" + precio + "'";
-            xqe.executeCommand(xq);
-        } catch (XQException ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    public void eliminarPlanta(String codigo) {
-
-        try {
-            xqe = con.createExpression();
-            String xq = "update delete doc('/m06uf3/plantas/plantas.xml')//PLANT[@codigo='" + codigo + "']";
-            xqe.executeCommand(xq);
-        } catch (XQException ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    public void eliminarEtiqueta(String etiqueta) {
-        try {
-            xqe = con.createExpression();
-            String xq = "update delete doc('/m06uf3/plantas/plantas.xml')//PLANT/" + etiqueta;
-            xqe.executeCommand(xq);
-        } catch (XQException ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    void eliminarAtribut(String atributo) {
-        try {
-            xqe = con.createExpression();
-            String xq = "update delete doc('/m06uf3/plantas/plantas.xml')//PLANT/@" + atributo;
-            xqe.executeCommand(xq);
+            System.out.println("Añadida la etiqueta: " + etiqueta + " con valor " + valor + " a las plantas de la zona: " + zona);
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
     }
 
     /**
-     * Método que traduce todas las etiquetas de las plantas.
+     * Método que obtiene las plantas con un rango de precio.
      *
-     * @param etiquetaNormal
-     * @param etiquetaTraducida
+     * @param minimo
+     * @param maximo
+     * @return
      */
-    void traducirNombreEtiquetas(String[] etiquetaNormal, String[] etiquetaTraducida) {
+    public List<Node> obtenirPerRangPreu(double minimo, double maximo) {
+        List<Node> plantas = new ArrayList<>();
         try {
             xqe = con.createExpression();
-            for (int i = 0; i < etiquetaNormal.length; i++) {
-                String xq = "update rename doc('/m06uf3/plantas/plantas.xml')//PLANT/" + etiquetaNormal[i] + " as '" + etiquetaTraducida[i] + "'";
-                xqe.executeCommand(xq);
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-        }
-    }
+            String xq = "for $b in doc ('/plantas/plantes.xml')//PLANT where every $a in $b/PRICE satisfies($a >= '" + minimo + "' and $a <= '" + maximo + "') return $b";
 
-    /**
-     * Método que modifica el precio de cada planta, eliminando el símbolo del
-     * dólar.
-     */
-    void modificarFormatoDolar() {
-        try {
-            xqe = con.createExpression();
-            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT/PRICE return update value $b with substring($b,2)";
-            xqe.executeCommand(xq);
+            XQResultSequence rs = xqe.executeQuery(xq);
+            while (rs.next()) {
+                plantas.add(rs.getItem().getNode());
+            }
         } catch (XQException ex) {
             System.out.println(ex.getMessage());
         }
+        return plantas;
     }
-    
+
     /**
-     * Método que devuelve las plantas que esten en la zona X. (No funciona, acabar).
+     * Método que devuelve las plantas que esten en la zona X.
+     *
      * @param zona
-     * @return 
+     * @return
      */
     public List<Node> cercarPlantesPerZona(int zona) {
         List<Node> listaPlantas = new ArrayList<>();
@@ -228,5 +216,39 @@ public class Consultes {
             System.out.println(ex.getMessage());
         }
         return listaPlantas;
+    }
+
+    /**
+     * Método que modifica el precio de la planta. Se cambia el precio de la planta
+     * con el nombre que el usuario introduce.
+     * @param nombre
+     * @param precio 
+     */
+    public void modificarPreuPlanta(String nombre, double precio) {
+        try {
+            xqe = con.createExpression();
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/COMMON satisfies($a = '" + nombre + "') return update value $b/PRICE with " + precio;
+            xqe.executeCommand(xq);
+            System.out.println("Modificada la planta " + nombre + "\nPrecio actual: " + precio);
+        } catch (XQException ex) {
+            System.out.println(ex.getMessage());
+        }
+    }
+
+    /**
+     * Método para eliminar una planta por su nombre.
+     *
+     * @param nombre
+     */
+    public void eliminarPlanta(String nombre) {
+
+        try {
+            xqe = con.createExpression();
+            String xq = "for $b in doc('/m06uf3/plantas/plantas.xml')//PLANT where every $a in $b/COMMON satisfies($a ='" + nombre + "') return update delete $b";
+            xqe.executeCommand(xq);
+            System.out.println("Eliminada la planta: " + nombre + ".");
+        } catch (XQException ex) {
+            System.out.println(ex.getMessage());
+        }
     }
 }
