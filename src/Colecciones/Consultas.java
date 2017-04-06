@@ -5,12 +5,23 @@
  */
 package Colecciones;
 
-import java.util.Arrays;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 import org.xmldb.api.DatabaseManager;
 import org.xmldb.api.base.Collection;
 import org.xmldb.api.base.Service;
 import org.xmldb.api.base.XMLDBException;
+import org.xmldb.api.modules.BinaryResource;
 import org.xmldb.api.modules.CollectionManagementService;
+import org.xmldb.api.modules.XMLResource;
 
 /**
  *
@@ -21,9 +32,30 @@ public class Consultas {
     Collection coleccion;
     CollectionManagementService cms;
     ConfigConnexio cc = new ConfigConnexio();
+    Service[] servicios;
+    XMLResource xmlresource;
+    BinaryResource binaryresource;
 
     public Consultas() {
         this.coleccion = cc.conectar();
+        establecerCollectionManagementService();
+    }
+
+    /**
+     * Para establecer a CollectionManagementService el servicio
+     * correspondiente.
+     */
+    public void establecerCollectionManagementService() {
+        try {
+            servicios = coleccion.getServices();
+            for (Service servicio : servicios) {
+                if (servicio.getName().equals("CollectionManagementService")) {
+                    cms = (CollectionManagementService) servicio;
+                }
+            }
+        } catch (XMLDBException e) {
+            System.out.println(e);
+        }
     }
 
     /**
@@ -51,13 +83,15 @@ public class Consultas {
     /**
      * Para obtener la lista de nombres de las colecciones hijas.
      *
+     * @return
      */
-    public void obtenerListaNombreColeccionHijas() {
+    public String[] obtenerListaNombreColeccionHijas() {
         try {
-            System.out.println("Lista nombre colección hijas: " + Arrays.toString(coleccion.listChildCollections()));
+            return coleccion.listChildCollections();
         } catch (Exception e) {
             System.out.println(e);
         }
+        return null;
     }
 
     /**
@@ -94,9 +128,95 @@ public class Consultas {
      *
      * @param nombreColeccion
      * @param nombreRecurso
-     * @return
+     * @throws org.xmldb.api.base.XMLDBException
      */
-    public boolean comprobarRecursoDentroColeccion(String nombreColeccion, String nombreRecurso) {
-        return true;
+    public void comprobarRecursoDentroColeccion(String nombreColeccion, String nombreRecurso) throws XMLDBException {
+        coleccion = DatabaseManager.getCollection("xmldb:exist://localhost:8080/exist/xmlrpc/db/" + nombreColeccion, "admin", "123456");
+        if (coleccion.getResource(nombreRecurso).getId() != null) {
+            System.out.println("Existe! Recurso --> " + coleccion.getResource(nombreRecurso).getId());
+        } else {
+            System.out.println("No existe.");
+        }
+    }
+
+    //RECURSOS
+    /**
+     * Método que añade un recurso XML a la BD siempre y cuando exista.
+     *
+     * @param nombreRecurso
+     */
+    public void afegirRecursXML(String nombreRecurso) {
+        try {
+            xmlresource = (XMLResource) coleccion.createResource(nombreRecurso, XMLResource.RESOURCE_TYPE);
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(new File(nombreRecurso));
+            xmlresource.setContentAsDOM(doc);
+            coleccion.storeResource(xmlresource);
+            System.out.println("Añadido el recurso: " + nombreRecurso);
+        } catch (XMLDBException | ParserConfigurationException | SAXException | IOException e) {
+            System.out.println(e);
+        }
+    }
+
+    /**
+     * Método que elimina un recurso XML siempre y cuando exista.
+     *
+     * @param nombreRecurso
+     */
+    public void eliminarRecursXML(String nombreRecurso) {
+        try {
+            xmlresource = (XMLResource) coleccion.getResource(nombreRecurso);
+            coleccion.removeResource(xmlresource);
+            System.out.println("Eliminado!");
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    /**
+     * Método que obtiene el recurso XML con el nombre pasado por parametro.
+     *
+     * @param nombreRecurso
+     */
+    public void obtenerRecursoXML(String nombreRecurso) {
+        try {
+            xmlresource = (XMLResource) coleccion.getResource(nombreRecurso);
+            System.out.println(xmlresource.getContent());
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    /**
+     * Método que añade un recurso binario.
+     *
+     * @param nombreRecursoBinario
+     */
+    public void afegirRecursBinari(String nombreRecursoBinario) {
+        try {
+            binaryresource = (BinaryResource) coleccion.createResource(nombreRecursoBinario, BinaryResource.RESOURCE_TYPE);
+            binaryresource.setContent(new File(nombreRecursoBinario));
+            coleccion.storeResource(binaryresource);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
+
+    /**
+     * Método que obtiene un recurso binario.
+     *
+     * @param nombreRecursoBinario
+     */
+    public void obtenirRecursBinari(String nombreRecursoBinario) {
+        try {
+            binaryresource = (BinaryResource) coleccion.getResource(nombreRecursoBinario);
+            byte[] arrayContenido = (byte[]) binaryresource.getContent();
+            Path path = Paths.get(nombreRecursoBinario);
+            Files.write(path, arrayContenido);
+            coleccion.storeResource(binaryresource);
+        } catch (XMLDBException | IOException e) {
+            System.out.println(e);
+        }
     }
 }
